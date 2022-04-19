@@ -8,6 +8,7 @@ roteador.get('/', async (requisicao, resposta) => {
     const serializador = new Serializador(
         resposta.getHeader('Content-type')
     )
+    resposta.set('X-Powered-By', 'Gatito Pet-shop')
     resposta.send(
         serializador.serializar(produtos)
     )
@@ -23,6 +24,11 @@ roteador.post('/', async (requisicao, resposta, proximo) => {
     const serializador = new Serializador(
         resposta.getHeader('Content-type')
     )
+    resposta.set('X-Powered-By', 'Gatito Pet-shop')
+    resposta.set('Etag', produto.versao)
+    const timeStamp = (new Date(produto.dataAtualizacao)).getTime() 
+    resposta.set('Last-Modified', timeStamp)
+    resposta.set('Location', `/api/fornecedores/${produto.fornecedor}/produtos/${produto.id}`)
     resposta.status(201)
     resposta.send(
         serializador.serializar(produto)
@@ -40,6 +46,7 @@ roteador.delete('/:id', async (requisicao, resposta) => {
 
     const produto = new Produto(dados)
     await produto.apagar()
+    resposta.set('X-Powered-By', 'Gatito Pet-shop')
     resposta.status(204)
     resposta.end()
 })
@@ -57,13 +64,36 @@ roteador.get('/:id', async (requisicao, resposta, proximo) => {
             resposta.getHeader('Content-type'),
             ['preco', 'estoque', 'fornecedor', 'dataCriacao', 'dataAtualizacao', 'versao']
         )
+        resposta.set('X-Powered-By', 'Gatito Pet-shop')
+        resposta.set('Etag', produto.versao)
+        const timeStamp = (new Date(produto.dataAtualizacao)).getTime() 
+        resposta.set('Last-Modified', timeStamp)
         resposta.send(
             serializador.serializar(produto)
         )
    } catch (erro){
        proximo(erro)
    }
+})
 
+roteador.head('/:id', async (requisicao, resposta) => {
+    try {
+        const dados = {
+            id: requisicao.params.id,
+            fornecedor: requisicao.fornecedor.id
+        }
+
+        const produto = new Produto(dados)
+        await produto.carregar()
+        resposta.set('X-Powered-By', 'Gatito Pet-shop')
+        resposta.set('Etag', produto.versao)
+        const timeStamp = (new Date(produto.dataAtualizacao)).getTime() 
+        resposta.set('Last-Modified', timeStamp)
+        resposta.status(200)
+        resposta.end()
+   } catch (erro){
+       proximo(erro)
+   }
 })
 
 roteador.put("/:id", async (requisicao, resposta, proximo) => {
@@ -79,6 +109,11 @@ roteador.put("/:id", async (requisicao, resposta, proximo) => {
     
         const produto = new Produto(dados)
         await produto.atualizar()
+        await produto.carregar()
+        resposta.set('X-Powered-By', 'Gatito Pet-shop')
+        resposta.set('Etag', produto.versao)
+        const timeStamp = (new Date(produto.dataAtualizacao)).getTime() 
+        resposta.set('Last-Modified', timeStamp)
         resposta.status(204)
         resposta.end()
 
@@ -97,6 +132,11 @@ roteador.post("/:id/diminuir-estoque", async (requisicao, resposta, proximo) => 
         await produto.carregar()
         produto.estoque = produto.estoque - requisicao.body.quantidade
         await produto.diminuirEstoque()
+        await produto.carregar()
+        resposta.set('X-Powered-By', 'Gatito Pet-shop')
+        resposta.set('Etag', produto.versao)
+        const timeStamp = (new Date(produto.dataAtualizacao)).getTime() 
+        resposta.set('Last-Modified', timeStamp)
         resposta.status(204)
         resposta.end()
     } catch (erro){
